@@ -1,5 +1,3 @@
-#!D:/Creative projects/Coding/Python/steam backlog project/myenv/Scripts/python.exe
-
 
 import secrets
 import requests
