@@ -3,6 +3,7 @@ import secrets_store
 import requests
 import loadData
 import pandas as pd
+import json
 
 api_key = secrets_store.steamKey
 steam_id = secrets_store.userID
@@ -65,4 +66,30 @@ zero_playtime_count = df['Playtime (forever)'] == 0
 zero_playtime_games = df[zero_playtime_count]
 
 print(f"Number of games with zero playtime: {len(zero_playtime_games)}")
+
+
+#url = f'http://api.steampowered.com/ISteamApps/GetAppList/v2/?key={api_key}&format=json'
+url = f'https://store.steampowered.com/api/appdetails/?appids={1150440}&key={api_key}'
+
+app_id = 1150440
+response = requests.get(url)
+
+if response.status_code == 200:
+    data = response.json()
+    print(data)
+    with open('aliens_app_list.json', 'w', encoding='utf-8') as json_file:
+        json.dump(data, json_file, ensure_ascii=False, indent=4)
+    # Find the game information using the app ID
+    game_info = next((game for game in data['applist']['apps'] if game['appid'] == app_id), None)
+
+    if game_info:
+        # Print the information for the specific game
+        print(f"Game Information for app ID {app_id}:")
+        print(f"Game Name: {game_info.get('name', 'N/A')}")
+        print(f"Game Tags: {game_info.get('tags', [])}")
+        # Add more fields as needed
+    else:
+        print(f"No information found for the game with app ID {app_id}")
+else:
+    print(f"Error: {response.status_code}, {response.text}")
 

@@ -30,9 +30,34 @@ class dataSetUp:
                         'Name': name,
                         'Playtime (2 weeks)': playtime_2weeks,
                         'Playtime (forever)': playtime_forever,
-                        'Icon URL': img_icon_url,
+                        'Icon URL': f"http://media.steampowered.com/steamcommunity/public/images/apps/{appid}/{img_icon_url}.jpg",
                        
                     })
+
+                # Create a DataFrame from the list of game data
+                df = pd.DataFrame(game_data)
+
+                return df
+            else:
+                print("No games found in the library.")
+        else:
+            print(f"Error: {response.status_code}, {response.text}")
+            
+    def getgameInfo(self, appid):
+        #url = f'http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={self.api_key}&appid={appid}&format=json'
+        url = f'http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={self.api_key}&appid={221640}&format=json'
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            if 'game' in data:
+                game = data['game']
+                game_data = []
+
+                name = game.get('gameName', 'N/A')
+                game_data.append({
+                    'Game ID': appid,
+                    'Name': name,
+                })
 
                 # Create a DataFrame from the list of game data
                 df = pd.DataFrame(game_data)
