@@ -4,3 +4,5 @@ secrets.py
 /myenv/
 lib
 test.py
+owned_games.csv
+secrets_store.py
