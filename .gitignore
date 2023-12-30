@@ -7,3 +7,4 @@ test.py
 owned_games.csv
 secrets_store.py
 test.r
+.vscode/settings.json
