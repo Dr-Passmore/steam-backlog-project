@@ -80,6 +80,7 @@ if response.status_code == 200:
     with open('aliens_app_list.json', 'w', encoding='utf-8') as json_file:
         json.dump(data, json_file, ensure_ascii=False, indent=4)
     # Find the game information using the app ID
+    '''
     game_info = next((game for game in data['applist']['apps'] if game['appid'] == app_id), None)
 
     if game_info:
@@ -92,4 +93,53 @@ if response.status_code == 200:
         print(f"No information found for the game with app ID {app_id}")
 else:
     print(f"Error: {response.status_code}, {response.text}")
+'''
 
+url_current_players = f'https://api.steampowered.com/ISteamUserStats/GetNumberOfCurrentPlayers/v1/?key={api_key}&appid={app_id}'
+url_peak_players = f'https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key={api_key}&appid={app_id}&steamid=0'
+
+try:
+    response_current_players = requests.get(url_current_players)
+    response_current_players.raise_for_status()  # Raise an HTTPError for bad responses
+    data_current_players = response_current_players.json()
+    with open('aliens_app_current_players.json', 'w', encoding='utf-8') as json_file:
+        json.dump(data_current_players, json_file, ensure_ascii=False, indent=4)
+    current_players = data_current_players['response']['player_count']
+    print(f'Current Players: {current_players}')
+
+    
+
+except requests.exceptions.HTTPError as errh:
+    print(f"HTTP Error: {errh}")
+except requests.exceptions.RequestException as err:
+    print(f"Request Error: {err}")
+except Exception as e:
+    print(f"An error occurred: {e}")
+    
+
+url_global_stats = f'http://api.steampowered.com/ISteamUserStats/GetGlobalStatsForGame/v0001/?key={api_key}&appid={app_id}&count=1'
+response_global_stats = requests.get(url_global_stats)
+
+try:
+    response_global_stats.raise_for_status()  # Check for HTTP errors
+
+    data_global_stats = response_global_stats.json()
+
+    # Check if the request was successful
+    if data_global_stats.get('response', {}).get('result') == 1:
+        # Save the response to a JSON file
+        with open('aliens_app_user_stats.json', 'w', encoding='utf-8') as json_file:
+            json.dump(data_global_stats, json_file, ensure_ascii=False, indent=4)
+        
+        # Extract and print global statistics
+        for stat_name, stat_value in data_global_stats['response']['globalstats']['stats'].items():
+            print(f'{stat_name}: {stat_value}')
+    else:
+        print(f"Error: {data_global_stats.get('response', {}).get('error')}")
+except requests.exceptions.HTTPError as http_err:
+    print(f"HTTP Error: {http_err}")
+except ValueError as json_err:
+    print(f"JSON Decode Error: {json_err}")
+    print(f"Response Content: {response_global_stats.content}")
+except Exception as err:
+    print(f"An unexpected error occurred: {err}")
