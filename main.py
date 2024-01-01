@@ -1,14 +1,14 @@
-
 import secrets_store
 import requests
-import loadData
-import pandas as pd
 import json
+import loadData
+import writeData
 
 api_key = secrets_store.steamKey
 steam_id = secrets_store.userID
 
 data_setup = loadData.dataSetUp()
+record_data = writeData.WriteData()
 
 '''
 url = f'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={api_key}&steamid={steam_id}&include_appinfo=1&include_played_free_games=1&format=json'
@@ -61,7 +61,8 @@ print(df)
 
 csv_filename = 'owned_games.csv'  # Specify the desired filename
 df.to_csv(csv_filename, index=False)
-
+ownedgames = record_data.writeData(df, 'owned_games')
+print(ownedgames)
 zero_playtime_count = df['Playtime (forever)'] == 0
 zero_playtime_games = df[zero_playtime_count]
 
@@ -120,26 +121,3 @@ except Exception as e:
 url_global_stats = f'http://api.steampowered.com/ISteamUserStats/GetGlobalStatsForGame/v0001/?key={api_key}&appid={app_id}&count=1'
 response_global_stats = requests.get(url_global_stats)
 
-try:
-    response_global_stats.raise_for_status()  # Check for HTTP errors
-
-    data_global_stats = response_global_stats.json()
-
-    # Check if the request was successful
-    if data_global_stats.get('response', {}).get('result') == 1:
-        # Save the response to a JSON file
-        with open('aliens_app_user_stats.json', 'w', encoding='utf-8') as json_file:
-            json.dump(data_global_stats, json_file, ensure_ascii=False, indent=4)
-        
-        # Extract and print global statistics
-        for stat_name, stat_value in data_global_stats['response']['globalstats']['stats'].items():
-            print(f'{stat_name}: {stat_value}')
-    else:
-        print(f"Error: {data_global_stats.get('response', {}).get('error')}")
-except requests.exceptions.HTTPError as http_err:
-    print(f"HTTP Error: {http_err}")
-except ValueError as json_err:
-    print(f"JSON Decode Error: {json_err}")
-    print(f"Response Content: {response_global_stats.content}")
-except Exception as err:
-    print(f"An unexpected error occurred: {err}")
