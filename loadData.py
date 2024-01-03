@@ -1,11 +1,16 @@
 import secrets_store
 import requests
 import pandas as pd
+import sqlalchemy
+import time
 
 class dataSetUp:
     def __init__(self) -> None:
         self.api_key = secrets_store.steamKey
         self.steam_id = secrets_store.userID
+        sql_user = secrets_store.mysqlUser
+        sql_pass = secrets_store.mysqlPassword
+        self.engine = sqlalchemy.create_engine(f'mysql+pymysql://{sql_user}:{sql_pass}@localhost:3306/steamdata')
     
     def getOwnedGames(self):
         url = f'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={self.api_key}&steamid={self.steam_id}&include_appinfo=1&include_played_free_games=1&format=json'
@@ -62,28 +67,138 @@ class dataSetUp:
             return 1
         else:
             return 0
+    
+    def updateGameDetails(self, df):
+        owned_games = df
+        query = '''
+            SELECT * FROM steamdata.game_details;
+        '''
         
-    def getgameInfo(self, appid):
-        #url = f'http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={self.api_key}&appid={appid}&format=json'
-        url = f'http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={self.api_key}&appid={221640}&format=json'
-        response = requests.get(url)
-        if response.status_code == 200:
-            data = response.json()
-            if 'game' in data:
-                game = data['game']
-                game_data = []
+        df_gamedetails = pd.read_sql(query, self.engine)
+        print(df_gamedetails)
+        gamedetails_game_ids = df_gamedetails['Game ID'].tolist()
 
-                name = game.get('gameName', 'N/A')
-                game_data.append({
+        # Drop rows in df_gamedetails that have a 'Game ID' in owned_games
+        owned_games_filtered = owned_games[~owned_games['Game ID'].isin(gamedetails_game_ids)]
+        
+        for app_id in owned_games_filtered['Game ID']:
+            print(app_id)
+            print(type(app_id))
+            df_game_details = self.getgameInfo(app_id)
+
+            # Check if the game details DataFrame is not empty
+            if not df_game_details.empty:
+                # Append the game details to the existing table
+                df_game_details.to_sql('game_details', self.engine, if_exists='append', index=False)
+            else:
+                print(f"Error getting details for Game ID {app_id}")
+    
+    def checkforemptylist(self, dataCheck):
+        if not dataCheck:
+            return None
+        
+        return dataCheck
+    
+    def getgameInfo(self, app_id):
+        url = f'https://store.steampowered.com/api/appdetails/?appids={app_id}&key={self.api_key}'
+        response = requests.get(url)
+        
+        if response.status_code == 200:
+            try:
+                json_data = response.json()
+                genres = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('genres', []))
+                platforms = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('platforms', []))
+                name = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('name', []))
+                metacritic = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('metacritic', []))
+                controller_support = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('controller_support', []))
+                is_free = json_data.get(f'{app_id}', {}).get('data', {}).get('is_free', [])
+                release_date = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('release_date', []))
+                detailed_description = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('detailed_description', []))
+                about_the_game = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('about_the_game', []))
+                short_description = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('short_description', []))
+                reviews = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('reviews', []))
+                header_image = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('header_image', []))
+                capsule_image = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('capsule_image', []))
+                capsule_imagev5 = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('capsule_imagev5', [])) 
+                website = self.checkforemptylist(json_data.get(f'{app_id}', {}).get('data', {}).get('website', [])) 
+                
+                if release_date is not None:
+                    released = self.checkforemptylist(release_date.get('date'))
+                else:
+                    released = None
+                appid = app_id
+                genre_list = []
+                if genres is not None:
+                    
+                    for genre in genres:
+                        genre_id = genre.get('id')
+                        description = genre.get('description')
+                        genre_list.append(description)
+                        print(f"Genre ID: {genre_id}, Description: {description}")
+
+                    genres_str = ', '.join(genre_list)
+                else:
+                    genres_str = None
+
+                genres_str = ', '.join(genre_list)
+                if not platforms:
+                    windows = None
+                    mac = None
+                    linux = None
+                else:
+                    windows = self.checkforemptylist(platforms.get('windows'))
+                    mac = self.checkforemptylist(platforms.get('mac'))
+                    linux = self.checkforemptylist(platforms.get('linux'))
+
+                try:
+                    metacritic_score = metacritic.get('score')
+                    metacritic_url = metacritic.get('url')
+                except AttributeError:
+                    metacritic_score = None
+                    metacritic_url = None
+                print(f"Game ID: {appid}")
+                print(f"Name: {name}")
+                print(f"Genre: {genres_str}")
+                print(f"Controller Support: {controller_support}")
+                print(f"Is Free: {is_free}")
+                print(f"Released: {released}")
+                print(f"Windows: {windows}")
+                print(f"Mac: {mac}")
+                print(f"Linux: {linux}")
+                print(f"Metacritic Score: {metacritic_score}")
+                print(f"Metacritic Url: {metacritic_url}")
+                print(f"Reviews: {reviews}")
+                print(f"Short Description: {short_description}")
+                print(f"About the Game: {about_the_game}")
+                print(f"Detailed Description: {detailed_description}")
+                print(f"Header Image: {header_image}")
+                print(f"Capsule Image: {capsule_image}")
+                print(f"Capsule Imagev5: {capsule_imagev5}")
+                print(f"Website: {website}")
+                df = pd.DataFrame({
                     'Game ID': appid,
                     'Name': name,
-                })
-
-                # Create a DataFrame from the list of game data
-                df = pd.DataFrame(game_data)
-
+                    'Genre': genres_str,
+                    'Controller Support': controller_support,
+                    'Is Free': is_free,
+                    'Released': released,
+                    'Windows': windows,
+                    'Mac': mac,
+                    'Linux': linux,
+                    'Metacritic Score': metacritic_score,
+                    'Metacritic Url': metacritic_url,
+                    'Reviews': reviews,
+                    'Short Description': short_description,
+                    'About the Game': about_the_game,
+                    'Detailed Description': detailed_description,
+                    'header_image': header_image,
+                    'capsule_image': capsule_image,
+                    'capsule_imagev5': capsule_imagev5,
+                    'website': website
+                }, index=[0])
+                time.sleep(3)
                 return df
-            else:
-                print("No games found in the library.")
+            except:
+                return pd.DataFrame()
         else:
             print(f"Error: {response.status_code}, {response.text}")
