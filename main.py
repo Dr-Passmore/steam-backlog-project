@@ -58,13 +58,16 @@ else:
 
 df = data_setup.getOwnedGames()
 print(df)
-
+csv_df = df[['Game ID', 'Name', 'Playtime (2 weeks)', 'Playtime (forever)', 'Icon URL']]
 csv_filename = 'owned_games.csv'  # Specify the desired filename
-df.to_csv(csv_filename, index=False)
+csv_df.to_csv(csv_filename, index=False)
 ownedgames = record_data.writeData(df, 'owned_games')
 print(ownedgames)
 zero_playtime_count = df['Playtime (forever)'] == 0
 zero_playtime_games = df[zero_playtime_count]
+
+updating = data_setup.updateGameDetails(df)
+print(f"Updating game details has returned: {updating}")
 
 print(f"Number of games with zero playtime: {len(zero_playtime_games)}")
 
