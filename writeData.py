@@ -14,4 +14,8 @@ class WriteData:
        
         return True
 
+    def writeGameInfo(self, df):
+        table_name = 'gameinfo'
+        df.to_sql(table_name, self.engine, if_exists='append', index=False, index_label='Game ID')
+        return True
    
