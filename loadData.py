@@ -4,6 +4,9 @@ import pandas as pd
 import sqlalchemy
 import time
 
+import recommendation
+import writeData
+
 class dataSetUp:
     def __init__(self) -> None:
         self.api_key = secrets_store.steamKey
@@ -11,6 +14,7 @@ class dataSetUp:
         sql_user = secrets_store.mysqlUser
         sql_pass = secrets_store.mysqlPassword
         self.engine = sqlalchemy.create_engine(f'mysql+pymysql://{sql_user}:{sql_pass}@localhost:3306/steamdata')
+        self.record_data = writeData.WriteData()
     
     def getOwnedGames(self):
         url = f'http://api.steampowered.com/IPlayerService/GetOwnedGames/v0001/?key={self.api_key}&steamid={self.steam_id}&include_appinfo=1&include_played_free_games=1&format=json'
@@ -59,6 +63,60 @@ class dataSetUp:
         else:
             print(f"Error: {response.status_code}, {response.text}")
     
+    def updateOwnedGamesInfo(self, df):
+        """
+        Update the owned games table with the latest information
+        """
+        stored_df = recommendation.GameSelection().allgames()
+        
+        merged_data = pd.merge(stored_df, df, on='Game ID', how='outer', suffixes=('_existing', '_new'), indicator=True)
+        print(merged_data)
+        new_rows = merged_data[merged_data['_merge'] == 'right_only']
+        print(new_rows)
+        for index, row in new_rows.iterrows():
+            new_game = row['Game ID']
+            new_game_info = df.loc[df['Game ID'] == new_game]
+            write_data = self.record_data.addNewGame(new_game_info)
+            if write_data == True:
+                print(f"write successful: {new_game_info}")
+            else:
+                print(f"write failed: {new_game_info}")
+        update_rows = merged_data[merged_data['_merge'] == 'both']
+        for index, row in update_rows.iterrows():
+            # Iterate through rows with differences and alter values
+            if row['Name_existing'] != row['Name_new']:
+                print(f"Updating Name for Game ID {row['Game ID']}")
+                self.record_data.altervalue('owned_games', 'Name', row['Name_new'], row['Game ID']) 
+                
+            if row['Playtime (2 weeks)_existing'] != row['Playtime (2 weeks)_new']:
+                print(f"Updating Playtime (2 weeks) for Game ID {row['Game ID']}")
+                self.record_data.altervalue('owned_games', 'Playtime (2 weeks)', row['Playtime (2 weeks)_new'], row['Game ID']) 
+                
+            if row['Playtime (forever)_existing'] != row['Playtime (forever)_new']:
+                print(f"Updating Playtime (forever) for Game ID {row['Game ID']}")
+                self.record_data.altervalue('owned_games', 'Playtime (forever)', row['Playtime (forever)_new'], row['Game ID']) 
+            
+            if row['Completed_existing'] != row['Completed_new']:
+                print(f"Updating Completed for Game ID {row['Game ID']}")
+                self.record_data.altervalue('owned_games', 'Completed', row['Completed_new'], row['Game ID'])
+                
+            if row['Broken_existing'] != row['Broken_new']:
+                print(f"Updating Broken for Game ID {row['Game ID']}")
+                self.record_data.altervalue('owned_games', 'Broken', row['Broken_new'], row['Game ID'])
+            
+            if row['Endless_existing'] != row['Endless_new']:
+                print(f"Updating Endless for Game ID {row['Game ID']}")
+                self.record_data.altervalue('owned_games', 'Endless', row['Endless_new'], row['Game ID'])
+            
+            if row['selected_existing'] != row['selected_new']:
+                print(f"Updating selected for Game ID {row['Game ID']}")
+                self.record_data.altervalue('owned_games', 'selected', row['selected_new'], row['Game ID'])
+            
+        # Iterate through rows with differences and accumulate the differences
+        #for index, row in merged_data.iterrows():
+            #print(row['Game ID'])
+            
+                
     def get_flag_value(game_id, df):
         """
         Get the flag value based on the Game ID
