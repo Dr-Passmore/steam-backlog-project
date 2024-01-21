@@ -27,7 +27,7 @@ class GameSelection:
         
     def completedgames(self):
         query = '''SELECT * FROM steamdata.owned_games
-            WHERE Completed = 1 AND Broken = 0 AND ENDLESS = 0 AND selected = 0;'''
+            WHERE Completed = 1 AND Broken = 0 AND ENDLESS = 0;'''
         return self.query_data(query)
     
     def allgames(self):
