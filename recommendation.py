@@ -7,13 +7,38 @@ from sklearn.metrics.pairwise import linear_kernel
 from bs4 import BeautifulSoup 
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np 
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
 
 class GameSelection:
     def __init__(self) -> None:
         sql_user = secrets_store.mysqlUser
         sql_pass = secrets_store.mysqlPassword
         self.engine = sqlalchemy.create_engine(f'mysql+pymysql://{sql_user}:{sql_pass}@localhost:3306/steamdata')
-
+        custom_stopwords = ['game', 
+                            'games', 
+                            'play', 
+                            'playing', 
+                            'player', 
+                            'players', 
+                            'steam', 
+                            'like', 
+                            'new', 
+                            'world', 
+                            's', 
+                            'experience', 
+                            'gameplay', 
+                            'mode', 
+                            'feature', 
+                            'including', 
+                            'featuring', 
+                            'steampowered',
+                            'app',
+                            'com',
+                            'store']
+        self.stopwords = set(ENGLISH_STOP_WORDS).union(custom_stopwords)
     def query_data(self, query):
         with self.engine.connect() as connection:
             result = connection.execute(text(query))
@@ -72,8 +97,15 @@ class GameSelection:
 
         top_10_descriptions = merged_df['Detailed Description'].fillna('')
         uncompleted_descriptions = uncompleted_games_df['Detailed Description'].fillna('')
+        # Generate a word cloud image
+        
+        wordcloud = WordCloud(stopwords=self.stopwords, background_color="white").generate(' '.join(top_10_descriptions))
 
-        tfidf_vectorizer = TfidfVectorizer(stop_words='english', max_df=0.8, min_df=0.1, ngram_range=(1, 2))
+        # Display the generated image
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis("off")
+        plt.show()
+        tfidf_vectorizer = TfidfVectorizer(stop_words=self.stopwords, max_df=0.8, min_df=0.1, ngram_range=(1, 2))
 
         # Fit and transform on top 10% of games
         top_10_tfidf_matrix = tfidf_vectorizer.fit_transform(top_10_descriptions)
@@ -97,9 +129,7 @@ class GameSelection:
             mean_score = np.mean(similarity_matrix[index, top_similar_game_indices])
             # Print similarity scores for debugging
             similarity_scores = similarity_matrix[index, top_similar_game_indices]
-            if game_row['Game ID'] == 286930:
-                print(f"Game ID {game_row['Game ID']} - Similarity Scores: {similarity_scores}")
-                print(mean_score)
+            
             sorted_recommendations = sorted(recommendations, key=lambda x: x['Mean Similarity Score'], reverse=True)
             recommendations.append({
                 'Uncompleted Game ID': game_row['Game ID'],
@@ -128,9 +158,17 @@ class GameSelection:
 
         completed_descriptions = merged_df['Detailed Description'].fillna('')
         uncompleted_descriptions = uncompleted_games_df['Detailed Description'].fillna('')
+        
+        # Generate a word cloud image
+        wordcloud = WordCloud(stopwords=self.stopwords, background_color="white").generate(' '.join(completed_descriptions))
+
+        # Display the generated image
+        plt.imshow(wordcloud, interpolation='bilinear')
+        plt.axis("off")
+        plt.show()
 
         # Use TF-IDF Vectorizer with adjusted parameters
-        tfidf_vectorizer = TfidfVectorizer(stop_words='english', max_df=0.5, min_df=0.05, ngram_range=(1, 2))
+        tfidf_vectorizer = TfidfVectorizer(stop_words=self.stopwords, max_df=0.5, min_df=0.05, ngram_range=(1, 2))
 
         # Fit and transform on completed games
         completed_tfidf_matrix = tfidf_vectorizer.fit_transform(completed_descriptions)
@@ -145,6 +183,7 @@ class GameSelection:
 
         for index, game_row in uncompleted_games_df.iterrows():
             # Find the indices with the highest cosine similarity
+            
             top_similar_game_indices = similarity_matrix[index].argsort()[::-1]
             
             top_10_percent = int(len(top_similar_game_indices) * 0.1)
@@ -154,9 +193,7 @@ class GameSelection:
             mean_score = np.mean(similarity_matrix[index, top_similar_game_indices])
             # Print similarity scores for debugging
             similarity_scores = similarity_matrix[index, top_similar_game_indices]
-            if game_row['Game ID'] == 286930:
-                print(f"Game ID {game_row['Game ID']} - Similarity Scores: {similarity_scores}")
-                print(mean_score)
+            
             sorted_recommendations = sorted(recommendations, key=lambda x: x['Mean Similarity Score'], reverse=True)
             recommendations.append({
                 'Uncompleted Game ID': game_row['Game ID'],
@@ -171,7 +208,7 @@ class GameSelection:
         return top_5_recommendations
         #return recommendations
         
-    
+
 print("Recommendations based on playtime:")
 GameSelection = GameSelection()
 print(GameSelection.recommendBasedOnPlaytime())
