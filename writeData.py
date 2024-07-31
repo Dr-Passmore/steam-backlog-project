@@ -7,7 +7,7 @@ class WriteData:
     def __init__(self):
         sql_user = secrets_store.mysqlUser
         sql_pass = secrets_store.mysqlPassword
-        self.engine = sqlalchemy.create_engine(f'mysql+pymysql://{sql_user}:{sql_pass}@localhost:3306/steamdata')
+        self.engine = sqlalchemy.create_engine(f'mysql+pymysql://{sql_user}:{sql_pass}@127.0.0.1:3307/steamdata')
 
     def writeData(self, df, table_name):
         

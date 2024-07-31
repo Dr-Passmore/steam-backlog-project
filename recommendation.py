@@ -16,7 +16,7 @@ class GameSelection:
     def __init__(self) -> None:
         sql_user = secrets_store.mysqlUser
         sql_pass = secrets_store.mysqlPassword
-        self.engine = sqlalchemy.create_engine(f'mysql+pymysql://{sql_user}:{sql_pass}@localhost:3306/steamdata')
+        self.engine = sqlalchemy.create_engine(f'mysql+pymysql://{sql_user}:{sql_pass}@127.0.0.1:3307/steamdata')
         custom_stopwords = ['game', 
                             'games', 
                             'play', 
@@ -37,8 +37,13 @@ class GameSelection:
                             'steampowered',
                             'app',
                             'com',
-                            'store']
+                            'store',
+                            'total',
+                            'unique',
+                            'weapon',
+                            'battle']
         self.stopwords = set(ENGLISH_STOP_WORDS).union(custom_stopwords)
+        self.stopwords = list(self.stopwords)
     def query_data(self, query):
         with self.engine.connect() as connection:
             result = connection.execute(text(query))
@@ -209,8 +214,12 @@ class GameSelection:
         #return recommendations
         
 
-print("Recommendations based on playtime:")
+
+
+
 GameSelection = GameSelection()
+print("Recommendations based on playtime:")
+
 print(GameSelection.recommendBasedOnPlaytime())
-print(GameSelection.recommendBasedOnCompleted())
 print(GameSelection.neverPlayedSelection())
+print(GameSelection.recommendBasedOnCompleted())

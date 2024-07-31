@@ -4,7 +4,7 @@ import pandas as pd
 import sqlalchemy
 import time
 
-import recommendation
+#import recommendation
 import writeData
 
 class dataSetUp:
@@ -13,7 +13,7 @@ class dataSetUp:
         self.steam_id = secrets_store.userID
         sql_user = secrets_store.mysqlUser
         sql_pass = secrets_store.mysqlPassword
-        self.engine = sqlalchemy.create_engine(f'mysql+pymysql://{sql_user}:{sql_pass}@localhost:3306/steamdata')
+        self.engine = sqlalchemy.create_engine(f'mysql+pymysql://{sql_user}:{sql_pass}@127.0.0.1:3307/steamdata')
         self.record_data = writeData.WriteData()
     
     def getOwnedGames(self):
@@ -24,10 +24,10 @@ class dataSetUp:
             if 'response' in data and 'games' in data['response']:
                 games = data['response']['games']
                 game_data = []
-                df_completed = pd.read_csv(r'gameStatus\completedgames.csv') 
-                df_broken = pd.read_csv(r'gameStatus\brokengames.csv')
-                df_endless = pd.read_csv(r'gameStatus\endless.csv')
-                df_selected = pd.read_csv(r'gameStatus\selectedgames.csv')
+                df_completed = pd.read_csv(r'gameStatus/completedgames.csv') 
+                df_broken = pd.read_csv(r'gameStatus/brokengames.csv')
+                df_endless = pd.read_csv(r'gameStatus/endless.csv')
+                df_selected = pd.read_csv(r'gameStatus/selectedgames.csv')
                 for game in games:
                     appid = game['appid']
                     name = game.get('name', 'N/A')
