@@ -127,6 +127,10 @@ class GameSelection:
             # Find the indices with the highest cosine similarity
             top_similar_game_indices = similarity_matrix[index].argsort()[::-1]
             
+            # Filter out the current game itself from the recommendations
+            current_game_id = game_row['Game ID']
+            top_similar_game_indices = [i for i in top_similar_game_indices if merged_df['Game ID'].iloc[i] != current_game_id]
+
             top_10_percent = int(len(top_similar_game_indices) * 0.1)
             top_similar_game_indices = top_similar_game_indices[:top_10_percent]
             # Get the top 5 most accurate recommendations
