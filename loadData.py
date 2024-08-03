@@ -283,7 +283,6 @@ class dataSetUp:
         for app_id in owned_games_filtered['Game ID']:
             # Skip game IDs that have previously errored
             if app_id in erroring_game_ids:
-                print(f"Skipping Game ID {app_id} due to previous errors")
                 continue
             
             # Fetch game details for the current game ID
@@ -294,7 +293,7 @@ class dataSetUp:
                 # Append the game details to the existing table in the database
                 df_game_details.to_sql('game_details', self.engine, if_exists='append', index=False)
             else:
-                # Log an error message and add the game ID to the new errors list
+                # Add the game ID to the new errors list
                 print(f"Error getting details for Game ID {app_id}")
                 new_errors.append({'Game ID': app_id})
 
