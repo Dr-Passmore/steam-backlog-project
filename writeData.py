@@ -36,7 +36,7 @@ class WriteData:
             SET `{condition_column}` = {condition_value}
             WHERE `Game ID` = {game_id}
         ''')
-        print(query)
+        #print(query)
         with self.engine.begin() as connection:
             connection.execute(query)
 

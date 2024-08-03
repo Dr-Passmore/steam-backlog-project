@@ -138,10 +138,22 @@ class dataSetUp:
 
         # Drop rows in df_gamedetails that have a 'Game ID' in owned_games
         owned_games_filtered = owned_games[~owned_games['Game ID'].isin(gamedetails_game_ids)]
+
+        # Load the list of erroring game IDs from erroring.csv if it exists
+        try:
+            erroring_games = pd.read_csv('erroring.csv')
+            erroring_game_ids = erroring_games['Game ID'].tolist()
+        except FileNotFoundError:
+            erroring_game_ids = []
+
+        new_errors = []
         
         for app_id in owned_games_filtered['Game ID']:
-            print(app_id)
-            print(type(app_id))
+            if app_id in erroring_game_ids:
+                print(f"Skipping Game ID {app_id} due to previous errors")
+                continue
+            #print(app_id)
+            #print(type(app_id))
             df_game_details = self.getgameInfo(app_id)
 
             # Check if the game details DataFrame is not empty
@@ -150,7 +162,17 @@ class dataSetUp:
                 df_game_details.to_sql('game_details', self.engine, if_exists='append', index=False)
             else:
                 print(f"Error getting details for Game ID {app_id}")
-    
+                new_errors.append({'Game ID': app_id})
+        if new_errors:
+            df_new_errors = pd.DataFrame(new_errors)
+            try:
+                df_existing_errors = pd.read_csv('erroring.csv')
+                df_combined_errors = pd.concat([df_existing_errors, df_new_errors], ignore_index=True)
+            except FileNotFoundError:
+                df_combined_errors = df_new_errors
+
+            df_combined_errors.to_csv('erroring.csv', index=False)
+
     def checkforemptylist(self, dataCheck):
         if not dataCheck:
             return None
@@ -260,3 +282,9 @@ class dataSetUp:
                 return pd.DataFrame()
         else:
             print(f"Error: {response.status_code}, {response.text}")
+'''
+datatest = dataSetUp()
+game_id = '205930'
+print(datatest.getgameInfo(game_id))
+
+'''
