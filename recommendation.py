@@ -92,7 +92,7 @@ class GameSelection:
         df = self.allgames()
         uncompleted_games_df = self.uncompletedgames()
 
-        top_10_percent_count = int(len(df) * 0.1)
+        top_10_percent_count = int(len(df) * 0.02)
         df_details = self.gamedetails()
         merged_df = pd.merge(df.nlargest(top_10_percent_count, 'Playtime (forever)'), df_details, on='Game ID', how='left')
         uncompleted_games_df = pd.merge(uncompleted_games_df, df_details, on='Game ID', how='left')
@@ -217,13 +217,108 @@ class GameSelection:
         return top_5_recommendations
         #return recommendations
         
+    def recommendBasedOnRecent (self):
+         # Get all games, uncompleted games, and game details dataframes
+        df = self.allgames()
+        uncompleted_games_df = self.uncompletedgames()
+        df_details = self.gamedetails()
+
+        # Filter out rows where 'Playtime (2 weeks)' is 0
+        recentlyPlayed = df[df['Playtime (2 weeks)'] != 0]
+
+        # Merge uncompleted games with game details
+        uncompleted_games_df = pd.merge(uncompleted_games_df, df_details, on='Game ID', how='left')
+        
+        # Clean HTML tags from descriptions
+        uncompleted_games_df['Detailed Description'] = uncompleted_games_df['Detailed Description'].apply(self.clean_html_tags)
+
+        # Check if there are recently played games
+        if not recentlyPlayed.empty:
+            # Merge recently played games with game details
+            recentlyPlayed.reset_index(drop=True, inplace=True)
+            recentlyPlayed = pd.merge(recentlyPlayed, df_details, on='Game ID', how='left')
+            recentlyPlayed['Detailed Description'] = recentlyPlayed['Detailed Description'].apply(self.clean_html_tags)
+
+            # Fill NaNs with empty strings
+            recent_descriptions = recentlyPlayed['Detailed Description'].fillna('')
+            uncompleted_descriptions = uncompleted_games_df['Detailed Description'].fillna('')
+
+            print(recentlyPlayed['Detailed Description'])
+
+            # Generate a word cloud image
+            wordcloud = WordCloud(stopwords=self.stopwords, background_color="white").generate(' '.join(recent_descriptions))
+
+            # Display the generated image
+            plt.imshow(wordcloud, interpolation='bilinear')
+            plt.axis("off")
+            plt.show()
+
+            # Use TF-IDF Vectorizer
+            tfidf_vectorizer = TfidfVectorizer(stop_words=self.stopwords, max_df=0.5, min_df=0.05, ngram_range=(1, 2))
+
+            # Fit and transform on recently played game descriptions
+            completed_tfidf_matrix = tfidf_vectorizer.fit_transform(recent_descriptions)
+
+            # Transform uncompleted game descriptions using the same vectorizer
+            uncompleted_tfidf_matrix = tfidf_vectorizer.transform(uncompleted_descriptions)
+
+            # Compute cosine similarity matrix
+            similarity_matrix = cosine_similarity(uncompleted_tfidf_matrix, completed_tfidf_matrix)
+
+            recommendations = []
+
+            for index, game_row in uncompleted_games_df.iterrows():
+            # Find the indices with the highest cosine similarity
+                top_similar_game_indices = similarity_matrix[index].argsort()[::-1]
+
+                current_game_id = game_row['Game ID']
+                
+                top_similar_game_indices = [i for i in top_similar_game_indices if recentlyPlayed['Game ID'].iloc[i] != current_game_id]
+                
+                top_10_percent = max(1, int(len(top_similar_game_indices) * 0.1))  # Ensure at least one recommendation
+                top_similar_game_indices = top_similar_game_indices[:top_10_percent]
+
+                # Get the top N most accurate recommendations, limit to available recently played games
+                num_recommendations = min(5, len(top_similar_game_indices))
+                game_recommendations = recentlyPlayed['Game ID'].iloc[top_similar_game_indices][:num_recommendations].tolist()
+                mean_score = np.mean(similarity_matrix[index, top_similar_game_indices])
+                
+                # Ensure mean_score is not NaN
+                if np.isnan(mean_score):
+                    mean_score = 0.0
+
+                recommendations.append({
+                    'Uncompleted Game ID': game_row['Game ID'],
+                    'Recommendations': game_recommendations,
+                    'Mean Similarity Score': mean_score
+                })
+
+            # Sort recommendations by mean similarity score
+            sorted_recommendations = sorted(recommendations, key=lambda x: x['Mean Similarity Score'], reverse=True)
+
+            # Get the top 10 recommendations
+            recommendation = sorted_recommendations[:10]
+        else:
+            print("No games have been played in the last 2 weeks.")
+            recommendation = self.neverPlayedSelection()
+
+        return recommendation
+
+# add recommend retro 
+
+# add recommend recently released 
 
 
 
 
 GameSelection = GameSelection()
+
 print("Recommendations based on playtime:")
 
 print(GameSelection.recommendBasedOnPlaytime())
-print(GameSelection.neverPlayedSelection())
+
 print(GameSelection.recommendBasedOnCompleted())
+
+print(GameSelection.recommendBasedOnRecent())
+
+print(GameSelection.neverPlayedSelection())
