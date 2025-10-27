@@ -313,12 +313,12 @@ class GameSelection:
 
 GameSelection = GameSelection()
 
-print("Recommendations based on playtime:")
+#print("Recommendations based on playtime:")
 
-print(GameSelection.recommendBasedOnPlaytime())
+#print(GameSelection.recommendBasedOnPlaytime())
 
-print(GameSelection.recommendBasedOnCompleted())
+#print(GameSelection.recommendBasedOnCompleted())
 
-print(GameSelection.recommendBasedOnRecent())
+#print(GameSelection.recommendBasedOnRecent())
 
-print(GameSelection.neverPlayedSelection())
+#print(GameSelection.neverPlayedSelection())

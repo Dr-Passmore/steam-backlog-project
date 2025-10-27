@@ -80,7 +80,7 @@ response = requests.get(url)
 
 if response.status_code == 200:
     data = response.json()
-    print(data)
+    #print(data)
     with open('aliens_app_list.json', 'w', encoding='utf-8') as json_file:
         json.dump(data, json_file, ensure_ascii=False, indent=4)
     # Find the game information using the app ID
@@ -109,7 +109,7 @@ try:
     with open('aliens_app_current_players.json', 'w', encoding='utf-8') as json_file:
         json.dump(data_current_players, json_file, ensure_ascii=False, indent=4)
     current_players = data_current_players['response']['player_count']
-    print(f'Current Players: {current_players}')
+    #print(f'Current Players: {current_players}')
 
     
 

@@ -39,7 +39,24 @@ class WriteData:
         #print(query)
         with self.engine.begin() as connection:
             connection.execute(query)
+        return True
 
+    def updateReleaseToDateFormat (self):
+        query = text(f'''UPDATE game_details
+            SET parsed_released = 
+                COALESCE(
+                    STR_TO_DATE(released, '%d %b, %Y'),  -- e.g. 23 Jan, 2025
+                    STR_TO_DATE(released, '%d %b %Y'),   -- e.g. 8 Nov 1998
+                    STR_TO_DATE(CONCAT('1 ', released), '%d %b %Y'), -- e.g. Dec 2010
+                    STR_TO_DATE(released, '%Y-%m-%d')    -- e.g. 1999-04-01
+                )
+            WHERE parsed_released IS NULL
+            AND released IS NOT NULL
+            AND released <> '';
+        ''')
+        with self.engine.begin() as connection:
+            connection.execute(query)
         return True
         
-   
+writing = WriteData()
+print(writing.updateReleaseToDateFormat())

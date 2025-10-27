@@ -97,7 +97,6 @@ class dataSetUp:
                     broken_game = dataSetUp.get_flag_value(appid, df_broken)
                     endless_game = dataSetUp.get_flag_value(appid, df_endless)
                     selected_game = dataSetUp.get_flag_value(appid, df_selected)
-                    
 
                     # Append game data to the list
                     game_data.append({
@@ -124,7 +123,25 @@ class dataSetUp:
             # Print an error message if the API request fails
             print(f"Error: {response.status_code}, {response.text}")
     
-    def updateOwnedGamesInfo(self, df):
+    def getFreeGamesAPIFailsOn(self):
+        '''
+        Limitation of the get all games owned by account misses anything
+        that does not provide the account a license or is incorrectly added
+        to the store as a demo 
+        '''
+        game_data = []
+                
+        # Load additional game status information from local CSV files
+        df_completed = pd.read_csv(r'gameStatus/completedgames.csv') 
+        df_broken = pd.read_csv(r'gameStatus/brokengames.csv')
+        df_endless = pd.read_csv(r'gameStatus/endless.csv')
+        df_selected = pd.read_csv(r'gameStatus/selectedgames.csv')
+        
+        df_missing = pd.read_csv(r'extraProcessing/missinggames')
+
+        df = pd.DataFrame(game_data)
+        return df
+    def updateOwnedGamesInfo(self, df, stored):
         '''
         Update the owned games table with the latest information.
         
@@ -136,7 +153,7 @@ class dataSetUp:
             df (DataFrame): DataFrame containing the latest information about owned games.
         '''
         # Fetch the existing stored games data using the recommendation module
-        stored_df = recommendation.GameSelection().allgames()
+        stored_df = stored
         
          # Merge the existing data with the new data on 'Game ID'
         # 'how' = 'outer' ensures all records are included
